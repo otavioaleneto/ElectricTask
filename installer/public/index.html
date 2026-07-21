@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Instalação do ElectricTask</title>
+<style>
+  :root {
+    --bg: #0b0d12;
+    --card: #141821;
+    --border: #232a38;
+    --text: #e7eaf0;
+    --muted: #8b94a7;
+    --primary: #3b82f6;
+    --primary-hover: #2563eb;
+    --ok: #22c55e;
+    --err: #f87171;
+    --warn: #f59e0b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 40px 16px;
+  }
+  .wrap { width: 100%; max-width: 640px; }
+  .logo { text-align: center; margin-bottom: 24px; }
+  .logo h1 { margin: 0; font-size: 28px; letter-spacing: -0.5px; }
+  .logo h1 span { color: var(--primary); }
+  .logo p { color: var(--muted); margin: 6px 0 0; font-size: 14px; }
+  .steps {
+    display: flex; gap: 6px; margin-bottom: 20px;
+  }
+  .steps .step {
+    flex: 1; height: 4px; border-radius: 2px; background: var(--border);
+    transition: background 0.3s;
+  }
+  .steps .step.active { background: var(--primary); }
+  .steps .step.done { background: var(--ok); }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+  }
+  h2 { margin: 0 0 4px; font-size: 20px; }
+  .sub { color: var(--muted); font-size: 14px; margin: 0 0 20px; }
+  .item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
+    margin-bottom: 8px; font-size: 14px;
+  }
+  .item .status { font-weight: 600; }
+  .status.ok { color: var(--ok); }
+  .status.err { color: var(--err); }
+  .status.warn { color: var(--warn); }
+  label { display: block; font-size: 13px; margin: 14px 0 6px; color: var(--muted); }
+  input, select {
+    width: 100%; padding: 10px 12px; border-radius: 8px;
+    border: 1px solid var(--border); background: #0e1219; color: var(--text);
+    font-size: 14px;
+  }
+  input:focus, select:focus { outline: none; border-color: var(--primary); }
+  .row { display: flex; gap: 12px; }
+  .row > div { flex: 1; }
+  .actions { display: flex; justify-content: space-between; margin-top: 24px; gap: 12px; }
+  button {
+    padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer;
+    font-size: 14px; font-weight: 600;
+  }
+  button.primary { background: var(--primary); color: #fff; }
+  button.primary:hover:not(:disabled) { background: var(--primary-hover); }
+  button.ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .msg { margin-top: 14px; padding: 10px 12px; border-radius: 8px; font-size: 13px; display: none; white-space: pre-wrap; word-break: break-word; }
+  .msg.show { display: block; }
+  .msg.error { background: rgba(248,113,113,0.1); color: var(--err); border: 1px solid rgba(248,113,113,0.3); }
+  .msg.success { background: rgba(34,197,94,0.1); color: var(--ok); border: 1px solid rgba(34,197,94,0.3); }
+  .msg.info { background: rgba(245,158,11,0.1); color: var(--warn); border: 1px solid rgba(245,158,11,0.3); }
+  .spinner {
+    display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite;
+    vertical-align: -2px; margin-right: 8px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .center { text-align: center; }
+  .big-ok { font-size: 52px; margin: 10px 0; }
+  code { background: #0e1219; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="logo">
+    <h1>Flow<span>Deck</span></h1>
+    <p>Assistente de instalação</p>
+  </div>
+  <div class="steps" id="stepsBar"></div>
+  <div class="card" id="card"></div>
+</div>
+
+<script>
+(function () {
+  var TOTAL_STEPS = 5;
+  var state = {
+    step: 0,
+    checks: null,
+    db: { dbType: "mysql", host: "localhost", port: "", database: "", user: "", password: "", databaseUrl: "" },
+    admin: { adminName: "", adminEmail: "", adminPassword: "", adminPassword2: "" },
+    tablesDone: false,
+    adminDone: false
+  };
+
+  var card = document.getElementById("card");
+  var stepsBar = document.getElementById("stepsBar");
+
+  function renderSteps() {
+    var html = "";
+    for (var i = 0; i < TOTAL_STEPS; i++) {
+      var cls = i < state.step ? "done" : (i === state.step ? "active" : "");
+      html += '<div class="step ' + cls + '"></div>';
+    }
+    stepsBar.innerHTML = html;
+  }
+
+  function api(method, url, body) {
+    return fetch(url, {
+      method: method,
+      headers: { "Content-Type": "application/json" },
+      body: body ? JSON.stringify(body) : undefined
+    }).then(function (res) {
+      return res.json().then(function (data) {
+        if (!res.ok || data.ok === false) {
+          throw new Error(data.error || "Erro inesperado (" + res.status + ")");
+        }
+        return data;
+      });
+    });
+  }
+
+  function dbPayload() {
+    return {
+      dbType: state.db.dbType,
+      host: state.db.host, port: state.db.port, database: state.db.database,
+      user: state.db.user, password: state.db.password,
+      databaseUrl: state.db.databaseUrl
+    };
+  }
+
+  function defaultDbPort() {
+    return state.db.dbType === "mysql" ? "3306" : "5432";
+  }
+
+  function showMsg(id, type, text) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.className = "msg show " + type;
+    el.textContent = text;
+  }
+  function hideMsg(id) {
+    var el = document.getElementById(id);
+    if (el) el.className = "msg";
+  }
+  function setLoading(btnId, loading, label) {
+    var btn = document.getElementById(btnId);
+    if (!btn) return;
+    btn.disabled = loading;
+    btn.innerHTML = loading ? '<span class="spinner"></span>' + label : label;
+  }
+
+  // ---------- Etapa 0: boas-vindas + dependências/permissões ----------
+  function renderChecks() {
+    card.innerHTML =
+      '<h2>1. Verificação do ambiente</h2>' +
+      '<p class="sub">Conferindo a versão do Node.js, as dependências instaladas e as permissões de escrita.</p>' +
+      '<div id="checkList"><p class="sub"><span class="spinner" style="border-top-color:#3b82f6"></span> Verificando…</p></div>' +
+      '<div class="msg" id="msg0"></div>' +
+      '<div class="actions">' +
+      '  <button class="ghost" id="btnRecheck">Verificar novamente</button>' +
+      '  <button class="primary" id="btnNext0" disabled>Continuar</button>' +
+      '</div>';
+    document.getElementById("btnRecheck").onclick = loadChecks;
+    document.getElementById("btnNext0").onclick = function () { go(1); };
+    loadChecks();
+  }
+
+  function checkItem(label, ok, detail) {
+    return '<div class="item"><span>' + label + (detail ? ' <code>' + detail + '</code>' : '') + '</span>' +
+      '<span class="status ' + (ok ? 'ok">OK' : 'err">FALHOU') + '</span></div>';
+  }
+
+  function loadChecks() {
+    hideMsg("msg0");
+    api("GET", "/install/api/checks").then(function (data) {
+      state.checks = data;
+      var html = "";
+      html += checkItem("Node.js " + data.node.required, data.node.ok, "v" + data.node.version);
+      data.modules.forEach(function (m) {
+        html += checkItem("Módulo " + m.name, m.ok);
+      });
+      data.permissions.forEach(function (p) {
+        html += checkItem("Permissão de escrita", p.writable, p.path);
+      });
+      html += checkItem("Bundle do servidor", data.serverBundle.ok, data.serverBundle.path);
+      html += checkItem("Arquivos do site (public)", data.publicDir.ok, data.publicDir.path);
+      (data.schemaFiles || []).forEach(function (s) {
+        html += checkItem("Schema do banco", s.ok, s.path);
+      });
+      document.getElementById("checkList").innerHTML = html;
+
+      var schemasOk = (data.schemaFiles || []).every(function (s) { return s.ok; });
+      var allOk = data.node.ok &&
+        data.modules.every(function (m) { return m.ok; }) &&
+        data.permissions.every(function (p) { return p.writable; }) &&
+        schemasOk && data.publicDir.ok && data.serverBundle.ok;
+
+      document.getElementById("btnNext0").disabled = !allOk;
+      if (!allOk) {
+        var tips = [];
+        if (!data.node.ok) tips.push("Selecione uma versão do Node.js " + data.node.required + " no cPanel (Setup Node.js App).");
+        if (data.modules.some(function (m) { return !m.ok; })) tips.push('Execute "Run NPM Install" no cPanel (ou npm install via terminal) e verifique de novo.');
+        if (data.permissions.some(function (p) { return !p.writable; })) tips.push("Ajuste as permissões da pasta da aplicação (normalmente 755).");
+        if (!schemasOk || !data.publicDir.ok || !data.serverBundle.ok) tips.push("Parece que faltam arquivos do pacote. Envie o pacote completo novamente.");
+        showMsg("msg0", "error", tips.join("\n"));
+      }
+    }).catch(function (err) {
+      document.getElementById("checkList").innerHTML = "";
+      showMsg("msg0", "error", err.message);
+    });
+  }
+
+  // ---------- Etapa 1: banco de dados ----------
+  function renderDb() {
+    card.innerHTML =
+      '<h2>2. Banco de dados</h2>' +
+      '<p class="sub">Informe os dados do banco criado no cPanel. MySQL/MariaDB é o mais comum em hospedagem compartilhada.</p>' +
+      '<label>Tipo de banco</label>' +
+      '<select id="f_dbtype">' +
+      '  <option value="mysql">MySQL / MariaDB</option>' +
+      '  <option value="postgres">PostgreSQL</option>' +
+      '</select>' +
+      '<div class="row">' +
+      '  <div><label>Servidor (host)</label><input id="f_host" placeholder="localhost" /></div>' +
+      '  <div style="max-width:120px"><label>Porta</label><input id="f_port" placeholder="3306" /></div>' +
+      '</div>' +
+      '<label>Nome do banco</label><input id="f_database" placeholder="usuario_flowdeck" />' +
+      '<label>Usuário</label><input id="f_user" placeholder="usuario_fd" />' +
+      '<label>Senha</label><input id="f_password" type="password" />' +
+      '<label>Ou URL completa (opcional, substitui os campos acima)</label>' +
+      '<input id="f_url" placeholder="mysql://usuario:senha@localhost:3306/banco" />' +
+      '<div class="msg" id="msg1"></div>' +
+      '<div class="actions">' +
+      '  <button class="ghost" id="btnBack1">Voltar</button>' +
+      '  <button class="primary" id="btnTestDb">Testar conexão</button>' +
+      '</div>';
+    document.getElementById("f_dbtype").value = state.db.dbType;
+    document.getElementById("f_host").value = state.db.host;
+    document.getElementById("f_port").value = state.db.port;
+    document.getElementById("f_database").value = state.db.database;
+    document.getElementById("f_user").value = state.db.user;
+    document.getElementById("f_password").value = state.db.password;
+    document.getElementById("f_url").value = state.db.databaseUrl;
+    var syncDbType = function () {
+      state.db.dbType = document.getElementById("f_dbtype").value;
+      var portInput = document.getElementById("f_port");
+      portInput.placeholder = defaultDbPort();
+      var urlInput = document.getElementById("f_url");
+      urlInput.placeholder = state.db.dbType === "mysql"
+        ? "mysql://usuario:senha@localhost:3306/banco"
+        : "postgresql://usuario:senha@localhost:5432/banco";
+    };
+    document.getElementById("f_dbtype").onchange = syncDbType;
+    syncDbType();
+    document.getElementById("btnBack1").onclick = function () { go(0); };
+    document.getElementById("btnTestDb").onclick = function () {
+      state.db.dbType = document.getElementById("f_dbtype").value;
+      state.db.host = document.getElementById("f_host").value.trim() || "localhost";
+      state.db.port = document.getElementById("f_port").value.trim() || defaultDbPort();
+      state.db.database = document.getElementById("f_database").value.trim();
+      state.db.user = document.getElementById("f_user").value.trim();
+      state.db.password = document.getElementById("f_password").value;
+      state.db.databaseUrl = document.getElementById("f_url").value.trim();
+      hideMsg("msg1");
+      setLoading("btnTestDb", true, "Testando…");
+      api("POST", "/install/api/test-db", dbPayload()).then(function (data) {
+        setLoading("btnTestDb", false, "Testar conexão");
+        var extra = data.existingTables > 0
+          ? "\nAtenção: o banco já contém " + data.existingTables + " tabela(s)."
+          : "";
+        showMsg("msg1", "success", "Conexão bem-sucedida!" + extra);
+        setTimeout(function () { go(2); }, 900);
+      }).catch(function (err) {
+        setLoading("btnTestDb", false, "Testar conexão");
+        showMsg("msg1", "error", "Falha na conexão: " + err.message);
+      });
+    };
+  }
+
+  // ---------- Etapa 2: criar tabelas ----------
+  function renderTables() {
+    card.innerHTML =
+      '<h2>3. Criação das tabelas</h2>' +
+      '<p class="sub">O instalador vai criar toda a estrutura do banco de dados (arquivo <code>schema.mysql.sql</code> ou <code>schema.pgsql.sql</code>, conforme o tipo escolhido).</p>' +
+      '<div class="msg" id="msg2"></div>' +
+      '<div class="actions">' +
+      '  <button class="ghost" id="btnBack2">Voltar</button>' +
+      '  <button class="primary" id="btnTables">Criar tabelas</button>' +
+      '</div>';
+    document.getElementById("btnBack2").onclick = function () { go(1); };
+    document.getElementById("btnTables").onclick = function () {
+      hideMsg("msg2");
+      setLoading("btnTables", true, "Criando tabelas…");
+      api("POST", "/install/api/create-tables", dbPayload()).then(function (data) {
+        setLoading("btnTables", false, "Criar tabelas");
+        state.tablesDone = true;
+        if (data.skipped) {
+          if (data.updated && data.summary) {
+            showMsg(
+              "msg2",
+              "info",
+              "Instalação existente detectada: estrutura atualizada (" +
+                data.summary.createdTables.length + " tabela(s) e " +
+                data.summary.addedColumns.length + " coluna(s) novas). Nenhum dado foi alterado. Total: " +
+                data.tables + " tabelas.",
+            );
+          } else {
+            showMsg("msg2", "info", "As tabelas já existiam e estão atualizadas (" + data.tables + " tabelas).");
+          }
+        } else {
+          showMsg("msg2", "success", data.tables + " tabelas criadas com sucesso!");
+        }
+        setTimeout(function () { go(3); }, 1100);
+      }).catch(function (err) {
+        setLoading("btnTables", false, "Criar tabelas");
+        showMsg("msg2", "error", err.message);
+      });
+    };
+  }
+
+  // ---------- Etapa 3: usuário admin ----------
+  function renderAdmin() {
+    card.innerHTML =
+      '<h2>4. Usuário administrador</h2>' +
+      '<p class="sub">Crie a conta que terá acesso total ao painel do ElectricTask.</p>' +
+      '<label>Nome</label><input id="a_name" placeholder="Seu nome" />' +
+      '<label>E-mail</label><input id="a_email" type="email" placeholder="admin@seudominio.com" />' +
+      '<div class="row">' +
+      '  <div><label>Senha (mín. 6 caracteres)</label><input id="a_pass" type="password" /></div>' +
+      '  <div><label>Confirmar senha</label><input id="a_pass2" type="password" /></div>' +
+      '</div>' +
+      '<div class="msg" id="msg3"></div>' +
+      '<div class="actions">' +
+      '  <button class="ghost" id="btnBack3">Voltar</button>' +
+      '  <button class="primary" id="btnAdmin">Criar administrador</button>' +
+      '</div>';
+    document.getElementById("a_name").value = state.admin.adminName;
+    document.getElementById("a_email").value = state.admin.adminEmail;
+    document.getElementById("btnBack3").onclick = function () { go(2); };
+    document.getElementById("btnAdmin").onclick = function () {
+      state.admin.adminName = document.getElementById("a_name").value.trim();
+      state.admin.adminEmail = document.getElementById("a_email").value.trim();
+      state.admin.adminPassword = document.getElementById("a_pass").value;
+      state.admin.adminPassword2 = document.getElementById("a_pass2").value;
+      hideMsg("msg3");
+      if (state.admin.adminPassword !== state.admin.adminPassword2) {
+        showMsg("msg3", "error", "As senhas não conferem.");
+        return;
+      }
+      setLoading("btnAdmin", true, "Criando…");
+      var payload = dbPayload();
+      payload.adminName = state.admin.adminName;
+      payload.adminEmail = state.admin.adminEmail;
+      payload.adminPassword = state.admin.adminPassword;
+      api("POST", "/install/api/create-admin", payload).then(function (data) {
+        setLoading("btnAdmin", false, "Criar administrador");
+        state.adminDone = true;
+        showMsg("msg3", "success", data.updated
+          ? "Usuário já existia — atualizado como administrador."
+          : "Administrador criado com sucesso!");
+        setTimeout(function () { go(4); }, 900);
+      }).catch(function (err) {
+        setLoading("btnAdmin", false, "Criar administrador");
+        showMsg("msg3", "error", err.message);
+      });
+    };
+  }
+
+  // ---------- Etapa 4: finalizar ----------
+  function renderFinish() {
+    card.innerHTML =
+      '<h2>5. Finalizar instalação</h2>' +
+      '<p class="sub">O instalador vai gravar o arquivo de configuração (<code>.env</code>) com chaves de segurança geradas automaticamente e bloquear o assistente.</p>' +
+      '<div class="msg" id="msg4"></div>' +
+      '<div class="actions">' +
+      '  <button class="ghost" id="btnBack4">Voltar</button>' +
+      '  <button class="primary" id="btnFinish">Concluir instalação</button>' +
+      '</div>';
+    document.getElementById("btnBack4").onclick = function () { go(3); };
+    document.getElementById("btnFinish").onclick = function () {
+      hideMsg("msg4");
+      setLoading("btnFinish", true, "Finalizando…");
+      api("POST", "/install/api/finalize", dbPayload()).then(function () {
+        renderDone();
+      }).catch(function (err) {
+        setLoading("btnFinish", false, "Concluir instalação");
+        showMsg("msg4", "error", err.message);
+      });
+    };
+  }
+
+  function renderDone() {
+    state.step = TOTAL_STEPS;
+    renderSteps();
+    card.innerHTML =
+      '<div class="center">' +
+      '  <div class="big-ok">🎉</div>' +
+      '  <h2>Instalação concluída!</h2>' +
+      '  <p class="sub">A aplicação está sendo reiniciada. Se a página inicial não abrir em alguns segundos, use o botão <b>Restart</b> em "Setup Node.js App" no cPanel.</p>' +
+      '  <button class="primary" onclick="window.location.href=\'/\'">Ir para o ElectricTask</button>' +
+      '</div>';
+  }
+
+  function go(step) {
+    state.step = step;
+    renderSteps();
+    if (step === 0) renderChecks();
+    else if (step === 1) renderDb();
+    else if (step === 2) renderTables();
+    else if (step === 3) renderAdmin();
+    else if (step === 4) renderFinish();
+  }
+
+  go(0);
+})();
+</script>
+</body>
+</html>

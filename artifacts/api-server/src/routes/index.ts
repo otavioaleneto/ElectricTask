@@ -1,0 +1,48 @@
+import { Router, type IRouter } from "express";
+import healthRouter from "./health";
+import authRouter from "./auth";
+import workspacesRouter from "./workspaces";
+import membersRouter from "./members";
+import projectsRouter from "./projects";
+import columnsRouter from "./columns";
+import tasksRouter from "./tasks";
+import commentsRouter from "./comments";
+import attachmentsRouter from "./attachments";
+import storageRouter from "./storage";
+import notificationsRouter from "./notifications";
+import labelsRouter from "./labels";
+import videoLinksRouter from "./videoLinks";
+import timerRouter from "./timer";
+import recurrencesRouter from "./recurrences";
+import checklistRouter from "./checklist";
+import mindmapsRouter from "./mindmaps";
+import notesRouter from "./notes";
+import subscriptionsRouter from "./subscriptions";
+import adminRouter from "./admin";
+import installerRouter from "./installer";
+
+const router: IRouter = Router();
+
+router.use(healthRouter);
+router.use(authRouter);
+router.use(workspacesRouter);
+router.use(membersRouter);
+router.use(projectsRouter);
+router.use(columnsRouter);
+router.use(tasksRouter);
+router.use(commentsRouter);
+router.use(attachmentsRouter);
+router.use(storageRouter);
+router.use(notificationsRouter);
+router.use(labelsRouter);
+router.use(videoLinksRouter);
+router.use(timerRouter);
+router.use(recurrencesRouter);
+router.use(checklistRouter);
+router.use(mindmapsRouter);
+router.use(notesRouter);
+router.use(subscriptionsRouter);
+router.use(adminRouter);
+router.use(installerRouter);
+
+export default router;

@@ -1,0 +1,3925 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: auth
+    description: Authentication and current user
+  - name: workspaces
+    description: Workspace (tenant) management
+  - name: projects
+    description: Project management
+  - name: columns
+    description: Kanban columns
+  - name: tasks
+    description: Tasks
+  - name: attachments
+    description: Task attachments
+  - name: storage
+    description: Object storage upload endpoints
+  - name: checklist
+    description: Task checklist items
+  - name: mindmaps
+    description: Mind maps
+  - name: notes
+    description: Notes and knowledge links
+  - name: graph
+    description: Knowledge graph
+  - name: dashboard
+    description: Dashboard summaries
+  - name: admin
+    description: Admin user management
+  - name: subscriptions
+    description: Workspace subscriptions and renewals
+  - name: payment-methods
+    description: Reusable payment methods
+  - name: categories
+    description: Workspace subscription categories
+  - name: recurrences
+    description: Recurring task templates
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Log in with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Log out the current user
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+  /auth/me:
+    get:
+      operationId: getCurrentUser
+      tags: [auth]
+      summary: Get the currently authenticated user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /auth/preferences:
+    patch:
+      operationId: updatePreferences
+      tags: [auth]
+      summary: Update current user preferences (theme)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PreferencesUpdate"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new account (public) and log in
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterInput"
+      responses:
+        "201":
+          description: Registered and logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+        "400":
+          description: Invalid input or email already taken
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /auth/profile:
+    patch:
+      operationId: updateProfile
+      tags: [auth]
+      summary: Update the current user's name and/or email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileUpdate"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+        "400":
+          description: Invalid input or email already taken
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /auth/password:
+    patch:
+      operationId: changePassword
+      tags: [auth]
+      summary: Change the current user's password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordUpdate"
+      responses:
+        "200":
+          description: Password changed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: Current password incorrect or new password invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /auth/security-questions:
+    patch:
+      operationId: updateSecurityQuestions
+      tags: [auth]
+      summary: Set or replace the current user's 3 security questions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SecurityQuestionsUpdate"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+        "400":
+          description: Current password incorrect or invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /auth/avatar:
+    post:
+      operationId: setAvatar
+      tags: [auth]
+      summary: Set the current user's avatar from an uploaded object
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AvatarInput"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+        "400":
+          description: Invalid object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /auth/recovery/questions:
+    post:
+      operationId: getRecoveryQuestions
+      tags: [auth]
+      summary: Get the security questions for an account to start recovery
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecoveryQuestionsInput"
+      responses:
+        "200":
+          description: Security questions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecoveryQuestions"
+        "404":
+          description: Recovery not available for this account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /auth/recovery/reset:
+    post:
+      operationId: resetPasswordWithQuestions
+      tags: [auth]
+      summary: Reset password by answering security questions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecoveryResetInput"
+      responses:
+        "200":
+          description: Password reset
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: Answers incorrect or invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /users/{userId}/avatar:
+    get:
+      operationId: getUserAvatar
+      tags: [auth]
+      summary: Stream a user's avatar image
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: Avatar image
+          content:
+            image/*:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: No avatar
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /workspaces:
+    get:
+      operationId: listWorkspaces
+      tags: [workspaces]
+      summary: List workspaces for the current user
+      responses:
+        "200":
+          description: Workspaces
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Workspace"
+    post:
+      operationId: createWorkspace
+      tags: [workspaces]
+      summary: Create a workspace
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workspace"
+  /workspaces/{workspaceId}:
+    get:
+      operationId: getWorkspace
+      tags: [workspaces]
+      summary: Get a workspace
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200":
+          description: Workspace
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workspace"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    patch:
+      operationId: updateWorkspace
+      tags: [workspaces]
+      summary: Update a workspace
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workspace"
+    delete:
+      operationId: deleteWorkspace
+      tags: [workspaces]
+      summary: Delete a workspace
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "204":
+          description: Deleted
+
+  /workspaces/{workspaceId}/members:
+    get:
+      operationId: listWorkspaceMembers
+      tags: [members]
+      summary: List members of a workspace
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200":
+          description: Members
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WorkspaceMember"
+    post:
+      operationId: addWorkspaceMember
+      tags: [members]
+      summary: Add a member to a workspace by email (owner only)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddWorkspaceMemberInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceMember"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /workspaces/{workspaceId}/members/{userId}:
+    patch:
+      operationId: updateWorkspaceMemberRole
+      tags: [members]
+      summary: Update a member's role (owner only)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/UserId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateWorkspaceMemberRole"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceMember"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      operationId: removeWorkspaceMember
+      tags: [members]
+      summary: Remove a member from a workspace (owner only)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /workspaces/{workspaceId}/summary:
+    get:
+      operationId: getWorkspaceSummary
+      tags: [dashboard]
+      summary: Get dashboard summary for a workspace
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - name: period
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [7d, 30d, 90d]
+      responses:
+        "200":
+          description: Summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /workspaces/{workspaceId}/projects:
+    get:
+      operationId: listProjects
+      tags: [projects]
+      summary: List projects in a workspace
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200":
+          description: Projects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Project"
+    post:
+      operationId: createProject
+      tags: [projects]
+      summary: Create a project in a workspace
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+  /projects/{projectId}:
+    get:
+      operationId: getProject
+      tags: [projects]
+      summary: Get a project
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    patch:
+      operationId: updateProject
+      tags: [projects]
+      summary: Update a project
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+    delete:
+      operationId: deleteProject
+      tags: [projects]
+      summary: Delete a project
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "204":
+          description: Deleted
+
+  /projects/{projectId}/view:
+    post:
+      operationId: recordProjectView
+      tags: [projects]
+      summary: Record that the current user just viewed a project
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "204":
+          description: Recorded
+
+  /projects/{projectId}/columns:
+    get:
+      operationId: listColumns
+      tags: [columns]
+      summary: List columns in a project
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Columns
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Column"
+    post:
+      operationId: createColumn
+      tags: [columns]
+      summary: Create a column in a project
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ColumnInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Column"
+  /columns/{columnId}:
+    patch:
+      operationId: updateColumn
+      tags: [columns]
+      summary: Update a column
+      parameters:
+        - $ref: "#/components/parameters/ColumnId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ColumnUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Column"
+    delete:
+      operationId: deleteColumn
+      tags: [columns]
+      summary: Delete a column
+      parameters:
+        - $ref: "#/components/parameters/ColumnId"
+      responses:
+        "204":
+          description: Deleted
+
+  /projects/{projectId}/tasks:
+    get:
+      operationId: listTasks
+      tags: [tasks]
+      summary: List tasks in a project
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - name: assigneeId
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: labelId
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: priority
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [low, medium, high]
+        - name: due
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [overdue, next7, none]
+      responses:
+        "200":
+          description: Tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Task"
+    post:
+      operationId: createTask
+      tags: [tasks]
+      summary: Create a task in a project
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+  /tasks/{taskId}:
+    get:
+      operationId: getTask
+      tags: [tasks]
+      summary: Get a task
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      responses:
+        "200":
+          description: Task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    patch:
+      operationId: updateTask
+      tags: [tasks]
+      summary: Update a task
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+    delete:
+      operationId: deleteTask
+      tags: [tasks]
+      summary: Delete a task
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      responses:
+        "204":
+          description: Deleted
+  /tasks/{taskId}/move:
+    post:
+      operationId: moveTask
+      tags: [tasks]
+      summary: Move a task to a column and position
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskMove"
+      responses:
+        "200":
+          description: Moved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+
+  /tasks/{taskId}/recurrence:
+    post:
+      operationId: createTaskRecurrence
+      tags: [recurrences]
+      summary: Create a recurring template from an existing task
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecurrenceInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Recurrence"
+        "400":
+          description: Invalid rule or column
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /projects/{projectId}/recurrences:
+    get:
+      operationId: listProjectRecurrences
+      tags: [recurrences]
+      summary: List recurring templates of a project
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Recurrences
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Recurrence"
+        "404":
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /recurrences/{recurrenceId}:
+    patch:
+      operationId: updateRecurrence
+      tags: [recurrences]
+      summary: Pause or resume a recurring template
+      parameters:
+        - $ref: "#/components/parameters/RecurrenceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecurrenceUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Recurrence"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      operationId: deleteRecurrence
+      tags: [recurrences]
+      summary: Delete a recurring template
+      parameters:
+        - $ref: "#/components/parameters/RecurrenceId"
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /tasks/{taskId}/comments:
+    get:
+      operationId: listComments
+      tags: [comments]
+      summary: List comments for a task
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      responses:
+        "200":
+          description: Comments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Comment"
+    post:
+      operationId: createComment
+      tags: [comments]
+      summary: Create a comment on a task
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CommentInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Comment"
+  /comments/{commentId}:
+    delete:
+      operationId: deleteComment
+      tags: [comments]
+      summary: Delete a comment (author only)
+      parameters:
+        - $ref: "#/components/parameters/CommentId"
+      responses:
+        "204":
+          description: Deleted
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /tasks/{taskId}/activity:
+    get:
+      operationId: listTaskActivity
+      tags: [activity]
+      summary: List activity history for a task
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      responses:
+        "200":
+          description: Activity
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Activity"
+
+  /tasks/{taskId}/video-links:
+    get:
+      operationId: listVideoLinks
+      tags: [tasks]
+      summary: List video links for a task
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      responses:
+        "200":
+          description: Video links
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VideoLink"
+    post:
+      operationId: addVideoLink
+      tags: [tasks]
+      summary: Add a video link to a task
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VideoLinkInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoLink"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /video-links/{videoLinkId}:
+    patch:
+      operationId: updateVideoLink
+      tags: [tasks]
+      summary: Update a video link
+      parameters:
+        - $ref: "#/components/parameters/VideoLinkId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VideoLinkUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoLink"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      operationId: deleteVideoLink
+      tags: [tasks]
+      summary: Delete a video link
+      parameters:
+        - $ref: "#/components/parameters/VideoLinkId"
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /tasks/{taskId}/timer:
+    get:
+      operationId: getTaskTimer
+      tags: [tasks]
+      summary: Get the current user's timer state and total time for a task
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      responses:
+        "200":
+          description: Timer state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskTimer"
+  /tasks/{taskId}/timer/start:
+    post:
+      operationId: startTimer
+      tags: [tasks]
+      summary: Start (or resume) the current user's timer for a task
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      responses:
+        "200":
+          description: Timer state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskTimer"
+  /tasks/{taskId}/timer/stop:
+    post:
+      operationId: stopTimer
+      tags: [tasks]
+      summary: Stop the current user's running timer, optionally finishing the task
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TimerStopInput"
+      responses:
+        "200":
+          description: Timer state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskTimer"
+        "400":
+          description: No running timer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /timers/active:
+    get:
+      operationId: listActiveTimers
+      tags: [tasks]
+      summary: List the current user's running timers with task and project info
+      responses:
+        "200":
+          description: Active timers (empty array when none running)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActiveTimer"
+
+  /projects/{projectId}/time-summary:
+    get:
+      operationId: getProjectTimeSummary
+      tags: [tasks]
+      summary: Get total tracked time for a project, broken down by task and member
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Project time summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectTimeSummary"
+        "404":
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /tasks/{taskId}/attachments:
+    get:
+      operationId: listAttachments
+      tags: [attachments]
+      summary: List attachments for a task
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      responses:
+        "200":
+          description: Attachments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Attachment"
+    post:
+      operationId: registerAttachment
+      tags: [attachments]
+      summary: Register an uploaded file as a task attachment
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterAttachmentInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Attachment"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /attachments/{attachmentId}:
+    delete:
+      operationId: deleteAttachment
+      tags: [attachments]
+      summary: Delete an attachment
+      parameters:
+        - $ref: "#/components/parameters/AttachmentId"
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /storage/uploads/request-url:
+    post:
+      operationId: requestUploadUrl
+      tags: [storage]
+      summary: Request a presigned URL for file upload
+      description: |
+        Returns a presigned GCS URL for direct upload. The client sends JSON
+        metadata here, then uploads the file directly to the returned URL.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadUrlRequest"
+      responses:
+        "200":
+          description: Presigned upload URL generated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadUrlResponse"
+        "400":
+          description: Missing or invalid required fields
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /notifications:
+    get:
+      operationId: listNotifications
+      tags: [notifications]
+      summary: List notifications for the current user (newest first)
+      responses:
+        "200":
+          description: Notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Notification"
+  /notifications/unread-count:
+    get:
+      operationId: getUnreadNotificationCount
+      tags: [notifications]
+      summary: Get the count of unread notifications for the current user
+      responses:
+        "200":
+          description: Unread count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnreadCount"
+  /notifications/read-all:
+    post:
+      operationId: markAllNotificationsRead
+      tags: [notifications]
+      summary: Mark all of the current user's notifications as read
+      responses:
+        "204":
+          description: Marked
+  /notifications/{notificationId}/read:
+    post:
+      operationId: markNotificationRead
+      tags: [notifications]
+      summary: Mark a notification as read (recipient only)
+      parameters:
+        - $ref: "#/components/parameters/NotificationId"
+      responses:
+        "204":
+          description: Marked
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /projects/{projectId}/labels:
+    get:
+      operationId: listLabels
+      tags: [labels]
+      summary: List labels for a project
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Labels
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Label"
+    post:
+      operationId: createLabel
+      tags: [labels]
+      summary: Create a label for a project
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LabelInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Label"
+  /labels/{labelId}:
+    patch:
+      operationId: updateLabel
+      tags: [labels]
+      summary: Update a label
+      parameters:
+        - $ref: "#/components/parameters/LabelId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LabelUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Label"
+    delete:
+      operationId: deleteLabel
+      tags: [labels]
+      summary: Delete a label
+      parameters:
+        - $ref: "#/components/parameters/LabelId"
+      responses:
+        "204":
+          description: Deleted
+
+  /tasks/{taskId}/checklists:
+    get:
+      operationId: listChecklists
+      tags: [checklist]
+      summary: List checklists (with items) for a task
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      responses:
+        "200":
+          description: Checklists
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Checklist"
+    post:
+      operationId: createChecklist
+      tags: [checklist]
+      summary: Create a checklist for a task
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChecklistInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Checklist"
+  /checklists/{checklistId}:
+    patch:
+      operationId: updateChecklist
+      tags: [checklist]
+      summary: Update (rename / reorder) a checklist
+      parameters:
+        - $ref: "#/components/parameters/ChecklistId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChecklistUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Checklist"
+    delete:
+      operationId: deleteChecklist
+      tags: [checklist]
+      summary: Delete a checklist (and its items)
+      parameters:
+        - $ref: "#/components/parameters/ChecklistId"
+      responses:
+        "204":
+          description: Deleted
+  /checklists/{checklistId}/items:
+    post:
+      operationId: createChecklistItem
+      tags: [checklist]
+      summary: Create a checklist item
+      parameters:
+        - $ref: "#/components/parameters/ChecklistId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChecklistItemInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChecklistItem"
+  /checklist-items/{itemId}:
+    patch:
+      operationId: updateChecklistItem
+      tags: [checklist]
+      summary: Update a checklist item
+      parameters:
+        - $ref: "#/components/parameters/ItemId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChecklistItemUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChecklistItem"
+    delete:
+      operationId: deleteChecklistItem
+      tags: [checklist]
+      summary: Delete a checklist item
+      parameters:
+        - $ref: "#/components/parameters/ItemId"
+      responses:
+        "204":
+          description: Deleted
+
+  /workspaces/{workspaceId}/mindmaps:
+    get:
+      operationId: listMindmaps
+      tags: [mindmaps]
+      summary: List mind maps in a workspace
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200":
+          description: Mind maps
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Mindmap"
+    post:
+      operationId: createMindmap
+      tags: [mindmaps]
+      summary: Create a mind map
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MindmapInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Mindmap"
+  /mindmaps/{mindmapId}:
+    get:
+      operationId: getMindmap
+      tags: [mindmaps]
+      summary: Get a mind map
+      parameters:
+        - $ref: "#/components/parameters/MindmapId"
+      responses:
+        "200":
+          description: Mind map
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Mindmap"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    patch:
+      operationId: updateMindmap
+      tags: [mindmaps]
+      summary: Update a mind map
+      parameters:
+        - $ref: "#/components/parameters/MindmapId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MindmapUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Mindmap"
+    delete:
+      operationId: deleteMindmap
+      tags: [mindmaps]
+      summary: Delete a mind map
+      parameters:
+        - $ref: "#/components/parameters/MindmapId"
+      responses:
+        "204":
+          description: Deleted
+
+  /workspaces/{workspaceId}/notes:
+    get:
+      operationId: listNotes
+      tags: [notes]
+      summary: List notes in a workspace
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200":
+          description: Notes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NoteSummary"
+    post:
+      operationId: createNote
+      tags: [notes]
+      summary: Create a note
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateNoteBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NoteDetail"
+  /notes/{noteId}:
+    get:
+      operationId: getNote
+      tags: [notes]
+      summary: Get a note with its links and backlinks
+      parameters:
+        - $ref: "#/components/parameters/NoteId"
+      responses:
+        "200":
+          description: Note
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NoteDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    patch:
+      operationId: updateNote
+      tags: [notes]
+      summary: Update a note
+      parameters:
+        - $ref: "#/components/parameters/NoteId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateNoteBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NoteDetail"
+    delete:
+      operationId: deleteNote
+      tags: [notes]
+      summary: Delete a note
+      parameters:
+        - $ref: "#/components/parameters/NoteId"
+      responses:
+        "204":
+          description: Deleted
+  /workspaces/{workspaceId}/mentionables:
+    get:
+      operationId: listMentionables
+      tags: [notes]
+      summary: List linkable items (notes, mindmaps, tasks) for autocomplete
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Mentionables
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Mentionable"
+  /workspaces/{workspaceId}/graph:
+    get:
+      operationId: getWorkspaceGraph
+      tags: [graph]
+      summary: Get the workspace knowledge graph
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200":
+          description: Graph
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Graph"
+
+  /workspaces/{workspaceId}/subscriptions:
+    get:
+      operationId: listSubscriptions
+      tags: [subscriptions]
+      summary: List subscriptions in a workspace
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Subscriptions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Subscription"
+    post:
+      operationId: createSubscription
+      tags: [subscriptions]
+      summary: Create a subscription
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSubscriptionBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subscription"
+  /subscriptions/{subscriptionId}:
+    get:
+      operationId: getSubscription
+      tags: [subscriptions]
+      summary: Get a subscription with payments and linked tasks
+      parameters:
+        - $ref: "#/components/parameters/SubscriptionId"
+      responses:
+        "200":
+          description: Subscription
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubscriptionDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    patch:
+      operationId: updateSubscription
+      tags: [subscriptions]
+      summary: Update a subscription
+      parameters:
+        - $ref: "#/components/parameters/SubscriptionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSubscriptionBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subscription"
+    delete:
+      operationId: deleteSubscription
+      tags: [subscriptions]
+      summary: Delete a subscription
+      parameters:
+        - $ref: "#/components/parameters/SubscriptionId"
+      responses:
+        "204":
+          description: Deleted
+  /subscriptions/{subscriptionId}/reveal:
+    post:
+      operationId: revealSubscriptionCredential
+      tags: [subscriptions]
+      summary: Reveal the stored credential after re-entering the account password
+      parameters:
+        - $ref: "#/components/parameters/SubscriptionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RevealCredentialBody"
+      responses:
+        "200":
+          description: Revealed credential
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RevealedCredential"
+        "401":
+          description: Incorrect account password
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Too many attempts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /subscriptions/{subscriptionId}/mark-paid:
+    post:
+      operationId: markSubscriptionPaid
+      tags: [subscriptions]
+      summary: Mark a subscription as paid and advance the next due date
+      parameters:
+        - $ref: "#/components/parameters/SubscriptionId"
+      responses:
+        "200":
+          description: Updated subscription
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subscription"
+  /workspaces/{workspaceId}/subscription-summary:
+    get:
+      operationId: getSubscriptionSummary
+      tags: [subscriptions]
+      summary: Subscription dashboard summary
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200":
+          description: Summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubscriptionSummary"
+  /workspaces/{workspaceId}/payment-methods:
+    get:
+      operationId: listPaymentMethods
+      tags: [payment-methods]
+      summary: List payment methods in a workspace
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200":
+          description: Payment methods
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PaymentMethod"
+    post:
+      operationId: createPaymentMethod
+      tags: [payment-methods]
+      summary: Create a payment method
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentMethodInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentMethod"
+  /payment-methods/{paymentMethodId}:
+    patch:
+      operationId: updatePaymentMethod
+      tags: [payment-methods]
+      summary: Rename a payment method
+      parameters:
+        - $ref: "#/components/parameters/PaymentMethodId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentMethodInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentMethod"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      operationId: deletePaymentMethod
+      tags: [payment-methods]
+      summary: Delete a payment method
+      parameters:
+        - $ref: "#/components/parameters/PaymentMethodId"
+      responses:
+        "204":
+          description: Deleted
+  /workspaces/{workspaceId}/subscription-categories:
+    get:
+      operationId: listWorkspaceCategories
+      tags: [categories]
+      summary: List subscription categories of a workspace (seeds defaults on first use)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200":
+          description: Categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WorkspaceCategory"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      operationId: createWorkspaceCategory
+      tags: [categories]
+      summary: Create a subscription category
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceCategoryInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceCategory"
+        "409":
+          description: Category already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /subscription-categories/{categoryId}:
+    patch:
+      operationId: updateWorkspaceCategory
+      tags: [categories]
+      summary: Rename a subscription category
+      parameters:
+        - $ref: "#/components/parameters/CategoryId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceCategoryUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceCategory"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: A category with this name already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      operationId: deleteWorkspaceCategory
+      tags: [categories]
+      summary: Delete a subscription category (subscriptions fall back to "other")
+      parameters:
+        - $ref: "#/components/parameters/CategoryId"
+      responses:
+        "204":
+          description: Deleted
+        "400":
+          description: Default category cannot be deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /tasks/{taskId}/subscriptions:
+    get:
+      operationId: listTaskSubscriptions
+      tags: [subscriptions]
+      summary: List subscriptions linked to a task
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      responses:
+        "200":
+          description: Linked subscriptions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Subscription"
+    post:
+      operationId: linkTaskSubscription
+      tags: [subscriptions]
+      summary: Link a subscription to a task
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LinkSubscriptionBody"
+      responses:
+        "201":
+          description: Linked
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Subscription"
+  /tasks/{taskId}/subscriptions/{subscriptionId}:
+    delete:
+      operationId: unlinkTaskSubscription
+      tags: [subscriptions]
+      summary: Unlink a subscription from a task
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+        - $ref: "#/components/parameters/SubscriptionId"
+      responses:
+        "204":
+          description: Unlinked
+
+  /admin/users:
+    get:
+      operationId: listUsers
+      tags: [admin]
+      summary: List all users (admin only)
+      responses:
+        "200":
+          description: Users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminUser"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      operationId: createUser
+      tags: [admin]
+      summary: Create a user (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminUserInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUser"
+  /admin/users/{userId}:
+    patch:
+      operationId: updateUser
+      tags: [admin]
+      summary: Update a user (admin only)
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminUserUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUser"
+    delete:
+      operationId: deleteUser
+      tags: [admin]
+      summary: Delete a user (admin only)
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "204":
+          description: Deleted
+  /admin/stats:
+    get:
+      operationId: getAdminStats
+      tags: [admin]
+      summary: Get platform statistics (admin only)
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminStats"
+
+components:
+  parameters:
+    WorkspaceId:
+      name: workspaceId
+      in: path
+      required: true
+      schema:
+        type: integer
+    ProjectId:
+      name: projectId
+      in: path
+      required: true
+      schema:
+        type: integer
+    ColumnId:
+      name: columnId
+      in: path
+      required: true
+      schema:
+        type: integer
+    TaskId:
+      name: taskId
+      in: path
+      required: true
+      schema:
+        type: integer
+    RecurrenceId:
+      name: recurrenceId
+      in: path
+      required: true
+      schema:
+        type: integer
+    LabelId:
+      name: labelId
+      in: path
+      required: true
+      schema:
+        type: integer
+    VideoLinkId:
+      name: videoLinkId
+      in: path
+      required: true
+      schema:
+        type: integer
+    ItemId:
+      name: itemId
+      in: path
+      required: true
+      schema:
+        type: integer
+    ChecklistId:
+      name: checklistId
+      in: path
+      required: true
+      schema:
+        type: integer
+    MindmapId:
+      name: mindmapId
+      in: path
+      required: true
+      schema:
+        type: integer
+    CommentId:
+      name: commentId
+      in: path
+      required: true
+      schema:
+        type: integer
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: integer
+    NotificationId:
+      name: notificationId
+      in: path
+      required: true
+      schema:
+        type: integer
+    AttachmentId:
+      name: attachmentId
+      in: path
+      required: true
+      schema:
+        type: integer
+    NoteId:
+      name: noteId
+      in: path
+      required: true
+      schema:
+        type: integer
+    SubscriptionId:
+      name: subscriptionId
+      in: path
+      required: true
+      schema:
+        type: integer
+    PaymentMethodId:
+      name: paymentMethodId
+      in: path
+      required: true
+      schema:
+        type: integer
+    CategoryId:
+      name: categoryId
+      in: path
+      required: true
+      schema:
+        type: integer
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+        - success
+
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+    AuthUser:
+      type: object
+      required: [id, email, name, role, theme, hasSecurityQuestions]
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+          enum: [user, admin]
+        avatarUrl:
+          type: ["string", "null"]
+        theme:
+          type: string
+          enum: [dark, light]
+        hasSecurityQuestions:
+          type: boolean
+    PreferencesUpdate:
+      type: object
+      properties:
+        theme:
+          type: string
+          enum: [dark, light]
+    RegisterInput:
+      type: object
+      required:
+        - email
+        - name
+        - password
+        - question1
+        - answer1
+        - question2
+        - answer2
+        - question3
+        - answer3
+      properties:
+        email:
+          type: string
+          minLength: 3
+        name:
+          type: string
+          minLength: 1
+        password:
+          type: string
+          minLength: 8
+        question1:
+          type: string
+          minLength: 1
+        answer1:
+          type: string
+          minLength: 1
+        question2:
+          type: string
+          minLength: 1
+        answer2:
+          type: string
+          minLength: 1
+        question3:
+          type: string
+          minLength: 1
+        answer3:
+          type: string
+          minLength: 1
+    ProfileUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          minLength: 3
+    PasswordUpdate:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword:
+          type: string
+          minLength: 1
+        newPassword:
+          type: string
+          minLength: 8
+    SecurityQuestionsUpdate:
+      type: object
+      required:
+        - currentPassword
+        - question1
+        - answer1
+        - question2
+        - answer2
+        - question3
+        - answer3
+      properties:
+        currentPassword:
+          type: string
+          minLength: 1
+        question1:
+          type: string
+          minLength: 1
+        answer1:
+          type: string
+          minLength: 1
+        question2:
+          type: string
+          minLength: 1
+        answer2:
+          type: string
+          minLength: 1
+        question3:
+          type: string
+          minLength: 1
+        answer3:
+          type: string
+          minLength: 1
+    AvatarInput:
+      type: object
+      required: [objectPath]
+      properties:
+        objectPath:
+          type: string
+          minLength: 1
+    RecoveryQuestionsInput:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          minLength: 3
+    RecoveryQuestions:
+      type: object
+      required: [question1, question2, question3]
+      properties:
+        question1:
+          type: string
+        question2:
+          type: string
+        question3:
+          type: string
+    RecoveryResetInput:
+      type: object
+      required: [email, answer1, answer2, answer3, newPassword]
+      properties:
+        email:
+          type: string
+          minLength: 3
+        answer1:
+          type: string
+          minLength: 1
+        answer2:
+          type: string
+          minLength: 1
+        answer3:
+          type: string
+          minLength: 1
+        newPassword:
+          type: string
+          minLength: 8
+
+    Workspace:
+      type: object
+      required: [id, name, color, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        color:
+          type: string
+        createdAt:
+          type: string
+        currentUserRole:
+          type: string
+          enum: [owner, editor, viewer]
+    WorkspaceMember:
+      type: object
+      required: [userId, name, email, role, createdAt]
+      properties:
+        userId:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        avatarUrl:
+          type: ["string", "null"]
+        role:
+          type: string
+          enum: [owner, editor, viewer]
+        createdAt:
+          type: string
+    AddWorkspaceMemberInput:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+        role:
+          type: string
+          enum: [owner, editor, viewer]
+    UpdateWorkspaceMemberRole:
+      type: object
+      required: [role]
+      properties:
+        role:
+          type: string
+          enum: [owner, editor, viewer]
+    WorkspaceInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        color:
+          type: string
+    WorkspaceUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        description:
+          type: ["string", "null"]
+        color:
+          type: string
+
+    Project:
+      type: object
+      required: [id, workspaceId, name, type, platform, accentColor, taskCount, completedCount, createdAt, recentTasks]
+      properties:
+        id:
+          type: integer
+        workspaceId:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        type:
+          type: string
+          enum: [social, development]
+        coverImageUrl:
+          type: ["string", "null"]
+        platform:
+          type: string
+          enum: [youtube, instagram, tiktok, twitter, linkedin, twitch, generic]
+        accentColor:
+          type: string
+        taskCount:
+          type: integer
+        completedCount:
+          type: integer
+        createdAt:
+          type: string
+        lastViewedAt:
+          type: ["string", "null"]
+        recentTasks:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecentTask"
+    ProjectInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        type:
+          type: string
+          enum: [social, development]
+        coverImageUrl:
+          type: string
+        platform:
+          type: string
+          enum: [youtube, instagram, tiktok, twitter, linkedin, twitch, generic]
+        accentColor:
+          type: string
+    ProjectUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        description:
+          type: ["string", "null"]
+        type:
+          type: string
+          enum: [social, development]
+        coverImageUrl:
+          type: ["string", "null"]
+        platform:
+          type: string
+          enum: [youtube, instagram, tiktok, twitter, linkedin, twitch, generic]
+        accentColor:
+          type: string
+
+    Column:
+      type: object
+      required: [id, projectId, name, position, color, isDone]
+      properties:
+        id:
+          type: integer
+        projectId:
+          type: integer
+        name:
+          type: string
+        position:
+          type: integer
+        color:
+          type: string
+        isDone:
+          type: boolean
+    ColumnInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        color:
+          type: string
+        position:
+          type: integer
+        isDone:
+          type: boolean
+    ColumnUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        color:
+          type: string
+        position:
+          type: integer
+        isDone:
+          type: boolean
+
+    Label:
+      type: object
+      required: [id, projectId, name, color, createdAt]
+      properties:
+        id:
+          type: integer
+        projectId:
+          type: integer
+        name:
+          type: string
+        color:
+          type: string
+        createdAt:
+          type: string
+    LabelInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        color:
+          type: string
+    LabelUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        color:
+          type: string
+
+    Task:
+      type: object
+      required: [id, projectId, columnId, title, type, priority, position, completed, checklistTotal, checklistDone, createdAt, labels, videoLinks]
+      properties:
+        id:
+          type: integer
+        projectId:
+          type: integer
+        columnId:
+          type: integer
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        type:
+          type: string
+          enum: [standard, video]
+        priority:
+          type: string
+          enum: [low, medium, high]
+        dueDate:
+          type: ["string", "null"]
+        position:
+          type: integer
+        mindmapId:
+          type: ["integer", "null"]
+        assigneeId:
+          type: ["integer", "null"]
+        assignee:
+          type: ["object", "null"]
+          required: [id, name]
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+            avatarUrl:
+              type: ["string", "null"]
+        completed:
+          type: boolean
+        completedAt:
+          type: ["string", "null"]
+        checklistTotal:
+          type: integer
+        checklistDone:
+          type: integer
+        createdAt:
+          type: string
+        labels:
+          type: array
+          items:
+            $ref: "#/components/schemas/Label"
+        videoLinks:
+          type: array
+          items:
+            $ref: "#/components/schemas/VideoLink"
+    TaskInput:
+      type: object
+      required: [title, columnId]
+      properties:
+        title:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        type:
+          type: string
+          enum: [standard, video]
+        columnId:
+          type: integer
+        priority:
+          type: string
+          enum: [low, medium, high]
+        dueDate:
+          type: string
+        assigneeId:
+          type: ["integer", "null"]
+        labelIds:
+          type: array
+          items:
+            type: integer
+        insertAt:
+          type: string
+          enum: [start, end]
+    TaskUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+        description:
+          type: ["string", "null"]
+        type:
+          type: string
+          enum: [standard, video]
+        columnId:
+          type: integer
+        priority:
+          type: string
+          enum: [low, medium, high]
+        dueDate:
+          type: ["string", "null"]
+        position:
+          type: integer
+        mindmapId:
+          type: ["integer", "null"]
+        assigneeId:
+          type: ["integer", "null"]
+        completed:
+          type: boolean
+        labelIds:
+          type: array
+          items:
+            type: integer
+    VideoLink:
+      type: object
+      required: [id, taskId, url, position, createdAt]
+      properties:
+        id:
+          type: integer
+        taskId:
+          type: integer
+        url:
+          type: string
+        label:
+          type: ["string", "null"]
+        position:
+          type: integer
+        createdAt:
+          type: string
+    VideoLinkInput:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+          minLength: 1
+        label:
+          type: ["string", "null"]
+    VideoLinkUpdate:
+      type: object
+      properties:
+        url:
+          type: string
+          minLength: 1
+        label:
+          type: ["string", "null"]
+    TaskTimer:
+      type: object
+      required: [running, totalSeconds]
+      properties:
+        running:
+          type: boolean
+        startedAt:
+          type: ["string", "null"]
+        totalSeconds:
+          type: integer
+    TimerStopInput:
+      type: object
+      required: [finished]
+      properties:
+        finished:
+          type: boolean
+    ActiveTimer:
+      type: object
+      required: [taskId, taskTitle, projectId, projectName, workspaceId, startedAt]
+      properties:
+        taskId:
+          type: integer
+        taskTitle:
+          type: string
+        projectId:
+          type: integer
+        projectName:
+          type: string
+        workspaceId:
+          type: integer
+        startedAt:
+          type: string
+    Recurrence:
+      type: object
+      required: [id, projectId, columnId, columnName, title, type, priority, frequency, active, nextRunAt, createdAt]
+      properties:
+        id:
+          type: integer
+        projectId:
+          type: integer
+        columnId:
+          type: integer
+        columnName:
+          type: string
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        type:
+          type: string
+          enum: [standard, video]
+        priority:
+          type: string
+          enum: [low, medium, high]
+        frequency:
+          type: string
+          enum: [hourly, daily, weekly, monthly]
+        timeOfDay:
+          type: ["string", "null"]
+        dayOfWeek:
+          type: ["integer", "null"]
+        dayOfMonth:
+          type: ["integer", "null"]
+        active:
+          type: boolean
+        nextRunAt:
+          type: string
+        lastRunAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+    RecurrenceInput:
+      type: object
+      required: [columnId, frequency]
+      properties:
+        columnId:
+          type: integer
+        frequency:
+          type: string
+          enum: [hourly, daily, weekly, monthly]
+        timeOfDay:
+          type: string
+          pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+        dayOfWeek:
+          type: integer
+          minimum: 0
+          maximum: 6
+        dayOfMonth:
+          type: integer
+          minimum: 1
+          maximum: 31
+    RecurrenceUpdate:
+      type: object
+      required: [active]
+      properties:
+        active:
+          type: boolean
+    ProjectTaskTime:
+      type: object
+      required: [taskId, title, totalSeconds]
+      properties:
+        taskId:
+          type: integer
+        title:
+          type: string
+        totalSeconds:
+          type: integer
+    ProjectMemberTime:
+      type: object
+      required: [userId, name, totalSeconds]
+      properties:
+        userId:
+          type: integer
+        name:
+          type: string
+        avatarUrl:
+          type: ["string", "null"]
+        totalSeconds:
+          type: integer
+    ProjectTimeSummary:
+      type: object
+      required: [totalSeconds, tasks, members]
+      properties:
+        totalSeconds:
+          type: integer
+        tasks:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProjectTaskTime"
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProjectMemberTime"
+    TaskMove:
+      type: object
+      required: [columnId, position]
+      properties:
+        columnId:
+          type: integer
+        position:
+          type: integer
+
+    UserMini:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        avatarUrl:
+          type: ["string", "null"]
+    Comment:
+      type: object
+      required: [id, taskId, body, author, mentions, createdAt]
+      properties:
+        id:
+          type: integer
+        taskId:
+          type: integer
+        body:
+          type: string
+        author:
+          $ref: "#/components/schemas/UserMini"
+        mentions:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserMini"
+        createdAt:
+          type: string
+    CommentInput:
+      type: object
+      required: [body]
+      properties:
+        body:
+          type: string
+          minLength: 1
+        mentionedUserIds:
+          type: array
+          items:
+            type: integer
+    Attachment:
+      type: object
+      required: [id, taskId, name, contentType, size, uploaderName, createdAt]
+      properties:
+        id:
+          type: integer
+        taskId:
+          type: integer
+        name:
+          type: string
+        contentType:
+          type: string
+        size:
+          type: integer
+        uploaderName:
+          type: [string, "null"]
+        createdAt:
+          type: string
+    RegisterAttachmentInput:
+      type: object
+      required: [name, contentType, size, objectPath]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        contentType:
+          type: string
+          minLength: 1
+        size:
+          type: integer
+          minimum: 1
+        objectPath:
+          type: string
+          minLength: 1
+    UploadUrlRequest:
+      type: object
+      required: [name, size, contentType]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        size:
+          type: integer
+          minimum: 1
+        contentType:
+          type: string
+          minLength: 1
+    UploadUrlResponse:
+      type: object
+      required: [uploadURL, objectPath]
+      properties:
+        uploadURL:
+          type: string
+        objectPath:
+          type: string
+        metadata:
+          $ref: "#/components/schemas/UploadUrlRequest"
+    Activity:
+      type: object
+      required: [id, taskId, action, createdAt]
+      properties:
+        id:
+          type: integer
+        taskId:
+          type: integer
+        action:
+          type: string
+          enum: [created, moved, completed, reopened, assignee_changed, due_changed, timer_started, timer_paused, timer_finished]
+        detail:
+          type: ["string", "null"]
+        actor:
+          oneOf:
+            - $ref: "#/components/schemas/UserMini"
+            - type: "null"
+        createdAt:
+          type: string
+    NotificationTask:
+      type: object
+      required: [id, projectId, title]
+      properties:
+        id:
+          type: integer
+        projectId:
+          type: integer
+        title:
+          type: string
+    Notification:
+      type: object
+      required: [id, type, read, createdAt]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          enum:
+            [
+              assigned,
+              mentioned,
+              due_soon,
+              subscription_due,
+              subscription_overdue,
+            ]
+        read:
+          type: boolean
+        task:
+          oneOf:
+            - $ref: "#/components/schemas/NotificationTask"
+            - type: "null"
+        subscription:
+          oneOf:
+            - $ref: "#/components/schemas/NotificationSubscription"
+            - type: "null"
+        actor:
+          oneOf:
+            - $ref: "#/components/schemas/UserMini"
+            - type: "null"
+        createdAt:
+          type: string
+    UnreadCount:
+      type: object
+      required: [count]
+      properties:
+        count:
+          type: integer
+
+    Subscription:
+      type: object
+      required:
+        - id
+        - workspaceId
+        - category
+        - amountCents
+        - currency
+        - billingCycle
+        - nextDueDate
+        - reminderDaysBefore
+        - paymentType
+        - status
+        - hasCredential
+        - linkedTaskCount
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: integer
+        workspaceId:
+          type: integer
+        companySlug:
+          type: ["string", "null"]
+        customName:
+          type: ["string", "null"]
+        customColor:
+          type: ["string", "null"]
+        category:
+          type: string
+        amountCents:
+          type: integer
+        currency:
+          type: string
+          enum: [BRL, USD]
+        billingCycle:
+          type: string
+          enum: [monthly, yearly, weekly, quarterly, custom]
+        customCycleDays:
+          type: ["integer", "null"]
+        nextDueDate:
+          type: string
+        reminderDaysBefore:
+          type: integer
+        paymentType:
+          type: string
+          enum: [automatic, manual]
+        paymentMethodId:
+          type: ["integer", "null"]
+        paymentMethodName:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [active, paused, cancelled]
+        website:
+          type: ["string", "null"]
+        hasCredential:
+          type: boolean
+        notes:
+          type: ["string", "null"]
+        lastPaidAt:
+          type: ["string", "null"]
+        linkedTaskCount:
+          type: integer
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+    SubscriptionPayment:
+      type: object
+      required: [id, subscriptionId, amountCents, currency, dueDate, paidAt]
+      properties:
+        id:
+          type: integer
+        subscriptionId:
+          type: integer
+        amountCents:
+          type: integer
+        currency:
+          type: string
+        dueDate:
+          type: string
+        paidAt:
+          type: string
+        paidByName:
+          type: ["string", "null"]
+    SubscriptionTaskRef:
+      type: object
+      required: [id, title, projectId]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        projectId:
+          type: integer
+        dueDate:
+          type: ["string", "null"]
+    SubscriptionDetail:
+      type: object
+      required: [subscription, payments, tasks]
+      properties:
+        subscription:
+          $ref: "#/components/schemas/Subscription"
+        payments:
+          type: array
+          items:
+            $ref: "#/components/schemas/SubscriptionPayment"
+        tasks:
+          type: array
+          items:
+            $ref: "#/components/schemas/SubscriptionTaskRef"
+    CreateSubscriptionBody:
+      type: object
+      required: [nextDueDate]
+      properties:
+        companySlug:
+          type: ["string", "null"]
+        customName:
+          type: ["string", "null"]
+        customColor:
+          type: ["string", "null"]
+        category:
+          type: string
+        amountCents:
+          type: integer
+          minimum: 0
+        currency:
+          type: string
+          enum: [BRL, USD]
+        billingCycle:
+          type: string
+          enum: [monthly, yearly, weekly, quarterly, custom]
+        customCycleDays:
+          type: ["integer", "null"]
+        nextDueDate:
+          type: string
+          minLength: 1
+        reminderDaysBefore:
+          type: integer
+          minimum: 0
+        paymentType:
+          type: string
+          enum: [automatic, manual]
+        paymentMethodId:
+          type: ["integer", "null"]
+        status:
+          type: string
+          enum: [active, paused, cancelled]
+        website:
+          type: ["string", "null"]
+        username:
+          type: ["string", "null"]
+        password:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+    UpdateSubscriptionBody:
+      type: object
+      properties:
+        companySlug:
+          type: ["string", "null"]
+        customName:
+          type: ["string", "null"]
+        customColor:
+          type: ["string", "null"]
+        category:
+          type: string
+        amountCents:
+          type: integer
+          minimum: 0
+        currency:
+          type: string
+          enum: [BRL, USD]
+        billingCycle:
+          type: string
+          enum: [monthly, yearly, weekly, quarterly, custom]
+        customCycleDays:
+          type: ["integer", "null"]
+        nextDueDate:
+          type: string
+          minLength: 1
+        reminderDaysBefore:
+          type: integer
+          minimum: 0
+        paymentType:
+          type: string
+          enum: [automatic, manual]
+        paymentMethodId:
+          type: ["integer", "null"]
+        status:
+          type: string
+          enum: [active, paused, cancelled]
+        website:
+          type: ["string", "null"]
+        username:
+          type: ["string", "null"]
+        password:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+    RevealCredentialBody:
+      type: object
+      required: [password]
+      properties:
+        password:
+          type: string
+          minLength: 1
+    RevealedCredential:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: ["string", "null"]
+        password:
+          type: ["string", "null"]
+    PaymentMethod:
+      type: object
+      required: [id, workspaceId, name, createdAt]
+      properties:
+        id:
+          type: integer
+        workspaceId:
+          type: integer
+        name:
+          type: string
+        createdAt:
+          type: string
+        subscriptionCount:
+          type: integer
+    PaymentMethodInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+    WorkspaceCategory:
+      type: object
+      required: [id, workspaceId, key, label, createdAt]
+      properties:
+        id:
+          type: integer
+        workspaceId:
+          type: integer
+        key:
+          type: string
+        label:
+          type: string
+        createdAt:
+          type: string
+        subscriptionCount:
+          type: integer
+    WorkspaceCategoryInput:
+      type: object
+      required: [label]
+      properties:
+        label:
+          type: string
+          minLength: 1
+    WorkspaceCategoryUpdate:
+      type: object
+      required: [label]
+      properties:
+        label:
+          type: string
+          minLength: 1
+    LinkSubscriptionBody:
+      type: object
+      required: [subscriptionId]
+      properties:
+        subscriptionId:
+          type: integer
+    SubscriptionSpend:
+      type: object
+      required: [currency, amountCents]
+      properties:
+        currency:
+          type: string
+        amountCents:
+          type: integer
+    SubscriptionProjectAlert:
+      type: object
+      required: [projectId, projectName, accentColor, subscriptions]
+      properties:
+        projectId:
+          type: integer
+        projectName:
+          type: string
+        accentColor:
+          type: string
+        subscriptions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Subscription"
+    SubscriptionSummary:
+      type: object
+      required: [monthlyByCurrency, upcoming, projectAlerts]
+      properties:
+        monthlyByCurrency:
+          type: array
+          items:
+            $ref: "#/components/schemas/SubscriptionSpend"
+        upcoming:
+          type: array
+          items:
+            $ref: "#/components/schemas/Subscription"
+        projectAlerts:
+          type: array
+          items:
+            $ref: "#/components/schemas/SubscriptionProjectAlert"
+    NotificationSubscription:
+      type: object
+      required: [id, amountCents, currency, nextDueDate, paymentType]
+      properties:
+        id:
+          type: integer
+        companySlug:
+          type: ["string", "null"]
+        customName:
+          type: ["string", "null"]
+        customColor:
+          type: ["string", "null"]
+        amountCents:
+          type: integer
+        currency:
+          type: string
+        nextDueDate:
+          type: string
+        paymentType:
+          type: string
+
+    Checklist:
+      type: object
+      required: [id, taskId, title, position, items]
+      properties:
+        id:
+          type: integer
+        taskId:
+          type: integer
+        title:
+          type: string
+        position:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChecklistItem"
+    ChecklistInput:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+          minLength: 1
+    ChecklistUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+        position:
+          type: integer
+    ChecklistItem:
+      type: object
+      required: [id, checklistId, content, done, position]
+      properties:
+        id:
+          type: integer
+        checklistId:
+          type: integer
+        content:
+          type: string
+        done:
+          type: boolean
+        position:
+          type: integer
+    ChecklistItemInput:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: string
+          minLength: 1
+    ChecklistItemUpdate:
+      type: object
+      properties:
+        content:
+          type: string
+          minLength: 1
+        done:
+          type: boolean
+        position:
+          type: integer
+
+    Mindmap:
+      type: object
+      required: [id, workspaceId, name, data, parentId, createdAt]
+      properties:
+        id:
+          type: integer
+        workspaceId:
+          type: integer
+        name:
+          type: string
+        data:
+          $ref: "#/components/schemas/MindmapData"
+        taskId:
+          type: ["integer", "null"]
+        parentId:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+    MindmapData:
+      type: object
+      required: [nodes, edges]
+      properties:
+        nodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/MindmapNode"
+        edges:
+          type: array
+          items:
+            $ref: "#/components/schemas/MindmapEdge"
+        areas:
+          type: array
+          items:
+            $ref: "#/components/schemas/MindmapArea"
+        elements:
+          type: array
+          items:
+            $ref: "#/components/schemas/MindmapElement"
+    MindmapNode:
+      type: object
+      required: [id, label, x, y]
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        x:
+          type: number
+        y:
+          type: number
+        color:
+          type: ["string", "null"]
+        details:
+          type: ["string", "null"]
+        type:
+          type: ["string", "null"]
+          enum: [text, project, label, hotspot, mindmap, task, light, null]
+        projectId:
+          type: ["integer", "null"]
+        mindmapId:
+          type: ["integer", "null"]
+        taskId:
+          type: ["integer", "null"]
+        icon:
+          type: ["string", "null"]
+    MindmapEdge:
+      type: object
+      required: [id, source, target]
+      properties:
+        id:
+          type: string
+        source:
+          type: string
+        target:
+          type: string
+        directed:
+          type: ["boolean", "null"]
+    MindmapArea:
+      type: object
+      required: [id, x, y, width, height, color]
+      properties:
+        id:
+          type: string
+        x:
+          type: number
+        y:
+          type: number
+        width:
+          type: number
+        height:
+          type: number
+        color:
+          type: string
+        label:
+          type: ["string", "null"]
+    MindmapElement:
+      type: object
+      required: [id, shape, x, y, width, height]
+      properties:
+        id:
+          type: string
+        shape:
+          type: string
+          enum: [arrow, circle, square, triangle, diamond]
+        x:
+          type: number
+        y:
+          type: number
+        width:
+          type: number
+        height:
+          type: number
+        rotation:
+          type: ["number", "null"]
+        color:
+          type: ["string", "null"]
+    MindmapInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        data:
+          $ref: "#/components/schemas/MindmapData"
+        taskId:
+          type: ["integer", "null"]
+        parentId:
+          type: ["integer", "null"]
+    MindmapUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        data:
+          $ref: "#/components/schemas/MindmapData"
+        taskId:
+          type: ["integer", "null"]
+        parentId:
+          type: ["integer", "null"]
+
+    ItemRef:
+      type: object
+      required: [type, id, title]
+      properties:
+        type:
+          type: string
+          enum: [note, mindmap, task]
+        id:
+          type: integer
+        title:
+          type: string
+        projectId:
+          type: ["integer", "null"]
+    Note:
+      type: object
+      required: [id, workspaceId, title, content, isLocked, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        workspaceId:
+          type: integer
+        title:
+          type: string
+        content:
+          type: string
+        isLocked:
+          type: boolean
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+    NoteSummary:
+      type: object
+      required: [id, workspaceId, title, excerpt, isLocked, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        workspaceId:
+          type: integer
+        title:
+          type: string
+        excerpt:
+          type: string
+        isLocked:
+          type: boolean
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+    NoteDetail:
+      type: object
+      required: [note, outgoingLinks, backlinks]
+      properties:
+        note:
+          $ref: "#/components/schemas/Note"
+        outgoingLinks:
+          type: array
+          items:
+            $ref: "#/components/schemas/ItemRef"
+        backlinks:
+          type: array
+          items:
+            $ref: "#/components/schemas/ItemRef"
+    CreateNoteBody:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+          minLength: 1
+        content:
+          type: string
+    UpdateNoteBody:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+        content:
+          type: string
+        isLocked:
+          type: boolean
+    Mentionable:
+      type: object
+      required: [type, id, title]
+      properties:
+        type:
+          type: string
+          enum: [note, mindmap, task]
+        id:
+          type: integer
+        title:
+          type: string
+        projectId:
+          type: ["integer", "null"]
+    GraphNode:
+      type: object
+      required: [type, id, title]
+      properties:
+        type:
+          type: string
+          enum: [note, mindmap, task]
+        id:
+          type: integer
+        title:
+          type: string
+        projectId:
+          type: ["integer", "null"]
+    GraphEdge:
+      type: object
+      required: [id, sourceType, sourceId, targetType, targetId]
+      properties:
+        id:
+          type: string
+        sourceType:
+          type: string
+          enum: [note, mindmap, task]
+        sourceId:
+          type: integer
+        targetType:
+          type: string
+          enum: [note, mindmap, task]
+        targetId:
+          type: integer
+    Graph:
+      type: object
+      required: [nodes, edges]
+      properties:
+        nodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/GraphNode"
+        edges:
+          type: array
+          items:
+            $ref: "#/components/schemas/GraphEdge"
+
+    DashboardSummary:
+      type: object
+      required: [projectCount, taskCount, completedCount, openCount, mindmapCount, platformBreakdown, recentTasks, statusBreakdown, assigneeBreakdown, labelBreakdown, completionSeries]
+      properties:
+        projectCount:
+          type: integer
+        taskCount:
+          type: integer
+        completedCount:
+          type: integer
+        openCount:
+          type: integer
+        mindmapCount:
+          type: integer
+        platformBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlatformCount"
+        recentTasks:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecentTask"
+        statusBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/StatusCount"
+        assigneeBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssigneeCount"
+        labelBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/LabelCount"
+        completionSeries:
+          type: array
+          items:
+            $ref: "#/components/schemas/CompletionPoint"
+    PlatformCount:
+      type: object
+      required: [platform, count]
+      properties:
+        platform:
+          type: string
+        count:
+          type: integer
+    RecentTask:
+      type: object
+      required: [id, title, projectId, projectName, priority, createdAt]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        projectId:
+          type: integer
+        projectName:
+          type: string
+        priority:
+          type: string
+        createdAt:
+          type: string
+    StatusCount:
+      type: object
+      required: [status, count, color]
+      properties:
+        status:
+          type: string
+        count:
+          type: integer
+        color:
+          type: string
+    AssigneeCount:
+      type: object
+      required: [assigneeId, name, count]
+      properties:
+        assigneeId:
+          type: ["integer", "null"]
+        name:
+          type: string
+        avatarUrl:
+          type: ["string", "null"]
+        count:
+          type: integer
+    LabelCount:
+      type: object
+      required: [labelId, name, color, count]
+      properties:
+        labelId:
+          type: integer
+        name:
+          type: string
+        color:
+          type: string
+        count:
+          type: integer
+    CompletionPoint:
+      type: object
+      required: [date, count]
+      properties:
+        date:
+          type: string
+        count:
+          type: integer
+
+    AdminUser:
+      type: object
+      required: [id, email, name, role, createdAt, workspaceCount, projectCount]
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+          enum: [user, admin]
+        avatarUrl:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        workspaceCount:
+          type: integer
+        projectCount:
+          type: integer
+    AdminUserInput:
+      type: object
+      required: [email, name, password]
+      properties:
+        email:
+          type: string
+        name:
+          type: string
+        password:
+          type: string
+          minLength: 4
+        role:
+          type: string
+          enum: [user, admin]
+    AdminUserUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        role:
+          type: string
+          enum: [user, admin]
+        password:
+          type: string
+          minLength: 4
+
+    AdminStats:
+      type: object
+      required: [userCount, adminCount, workspaceCount, projectCount, taskCount, recentUsers]
+      properties:
+        userCount:
+          type: integer
+        adminCount:
+          type: integer
+        workspaceCount:
+          type: integer
+        projectCount:
+          type: integer
+        taskCount:
+          type: integer
+        recentUsers:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminUser"

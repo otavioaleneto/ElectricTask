@@ -1,0 +1,19 @@
+uploads = []
+
+[[generated]]
+id = "Zu7tQufxBTUZ8vZw10crk"
+uri = "file://artifacts/flowdeck-mobile/assets/images/icon.png"
+type = "image"
+title = "generated_image"
+
+[[outputs]]
+id = "bb4bQnzk5FgQ9h8GnEkSI"
+uri = "file://dist-installer/flowdeck-installer.zip"
+type = "unspecified"
+title = "FlowDeck — pacote de instalação/atualização (com upgrade automático do banco)"
+
+[[outputs]]
+id = "hUR6YlVAyT6HekPW88-Af"
+uri = "file://dist-installer/electrictask-installer.zip"
+type = "unspecified"
+title = "ElectricTask — Pacote de instalação (versão atual)"

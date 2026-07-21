@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bola de Plasma Azul - Efeito Tesla</title>
+    <style>
+        body {
+            margin: 0;
+            height: 100vh;
+            background-color: #050505;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            font-family: sans-serif;
+        }
+
+        canvas {
+            /* Fundo atualizado para tons de azul escuro */
+            background: radial-gradient(circle, #020c24 0%, #000000 80%);
+            border-radius: 50%;
+            /* Brilho do vidro atualizado para azul e ciano */
+            box-shadow: 
+                0 0 50px rgba(0, 150, 255, 0.4), 
+                inset 0 0 60px rgba(0, 150, 255, 0.3),
+                inset 0 0 20px rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="plasmaBall" width="400" height="400"></canvas>
+
+    <script>
+        const canvas = document.getElementById('plasmaBall');
+        const ctx = canvas.getContext('2d');
+        
+        const width = canvas.width;
+        const height = canvas.height;
+        const cx = width / 2;
+        const cy = height / 2;
+        
+        const radius = 190; 
+        const coreRadius = 20;
+
+        let mouse = { x: null, y: null, active: false };
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mx = e.clientX - rect.left;
+            const my = e.clientY - rect.top;
+            
+            const dist = Math.hypot(mx - cx, my - cy);
+            // Mantém a conexão apenas se o mouse estiver dentro do vidro
+            if (dist < radius - 5) {
+                mouse.x = mx;
+                mouse.y = my;
+                mouse.active = true;
+            } else {
+                mouse.active = false;
+            }
+        });
+
+        canvas.addEventListener('mouseleave', () => mouse.active = false);
+
+        // Função reutilizável para desenhar a linha do raio (zigue-zague)
+        function desenharRaioEletrico(startX, startY, endX, endY, color, thickness, segments, jitterAmount) {
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+
+            let currentX = startX;
+            let currentY = startY;
+
+            for (let i = 1; i <= segments; i++) {
+                const t = i / segments; 
+                
+                const baseX = startX + (endX - startX) * t;
+                const baseY = startY + (endY - startY) * t;
+
+                // O ruído é maior no meio do caminho e menor nas pontas
+                const jitter = jitterAmount * Math.sin(t * Math.PI);
+                const offsetX = (Math.random() - 0.5) * jitter;
+                const offsetY = (Math.random() - 0.5) * jitter;
+
+                currentX = baseX + offsetX;
+                currentY = baseY + offsetY;
+
+                ctx.lineTo(currentX, currentY);
+            }
+
+            ctx.strokeStyle = color;
+            ctx.lineWidth = thickness;
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = color;
+            ctx.stroke();
+            
+            // Faísca na ponta do raio
+            ctx.beginPath();
+            ctx.arc(currentX, currentY, thickness * 1.5, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffffff';
+            ctx.fill();
+        }
+
+        // Classe para os raios de fundo (que ficam girando sozinhos)
+        class RaioAmbiente {
+            constructor() {
+                this.angle = Math.random() * Math.PI * 2;
+                this.speed = (Math.random() - 0.5) * 0.04;
+                this.segments = 12;
+                // Cores em tons de azul e ciano
+                this.color = `hsl(${200 + Math.random() * 40}, 100%, 70%)`;
+                this.thickness = Math.random() * 1 + 0.5;
+            }
+
+            draw() {
+                this.angle += this.speed;
+                let targetX = cx + Math.cos(this.angle) * radius;
+                let targetY = cy + Math.sin(this.angle) * radius;
+
+                // Estes raios não são mais atraídos pelo mouse, apenas vagam
+                desenharRaioEletrico(cx, cy, targetX, targetY, this.color, this.thickness, this.segments, 35);
+            }
+        }
+
+        const raiosAmbientes = Array.from({ length: 8 }, () => new RaioAmbiente());
+
+        function animate() {
+            ctx.clearRect(0, 0, width, height);
+
+            // 1. Desenha os raios de fundo
+            raiosAmbientes.forEach(raio => raio.draw());
+
+            // 2. EFEITO TESLA: Raio principal conectando ao mouse
+            if (mouse.active) {
+                // Desenhamos 3 camadas de raio para o mouse para dar um efeito de "feixe de energia" bem forte
+                desenharRaioEletrico(cx, cy, mouse.x, mouse.y, 'rgba(0, 255, 255, 0.5)', 3, 15, 20); // Aura
+                desenharRaioEletrico(cx, cy, mouse.x, mouse.y, '#00bfff', 2, 15, 15); // Raio médio
+                desenharRaioEletrico(cx, cy, mouse.x, mouse.y, '#ffffff', 1.5, 15, 10); // Núcleo branco super quente
+
+                // Brilho extra no vidro onde o mouse está tocando
+                ctx.beginPath();
+                ctx.arc(mouse.x, mouse.y, 15, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(0, 255, 255, 0.3)';
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = '#00ffff';
+                ctx.fill();
+            }
+
+            // 3. Desenha o eletrodo central (núcleo)
+            ctx.beginPath();
+            ctx.arc(cx, cy, coreRadius, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffffff';
+            ctx.shadowBlur = 40;
+            ctx.shadowColor = '#0077ff';
+            ctx.fill();
+            
+            // Brilho pulsante azul no centro
+            ctx.beginPath();
+            ctx.arc(cx, cy, coreRadius + (Math.random() * 5 + 5), 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(0, 150, 255, 0.4)';
+            ctx.fill();
+
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+    </script>
+</body>
+</html>

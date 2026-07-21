@@ -1,0 +1,22 @@
+- [Global UI outside protected shell](global-ui-auth-gating.md) — app-root UI (floating widgets, persistent overlays) that renders on every route must be auth-gated and cleared on logout, or it leaks cached data on /login.
+- [FlowDeck typecheck baseline noise](flowdeck-typecheck-quirk.md) — @workspace/flowdeck typecheck has pre-existing errors; only verify CHANGED files are clean.
+- [FlowDeck visual verification in dev](flowdeck-visual-verification.md) — screenshots can't auth; :21518 has no /api routing (naked domain does); verify visuals via mockup-sandbox harness importing the real component.
+- [FlowDeck gotchas](flowdeck-gotchas.md) — conventions/quirks for the FlowDeck web app.
+- [FlowDeck mobile navigation](flowdeck-mobile-nav.md) — tab bar is coded twice (NativeTabs + classic Tabs), both must stay in sync; detail routes go at root stack like project/[id].
+- [FlowDeck rich-text editor save/close](flowdeck-rich-text-editor.md) — editor seeds initialContent only at mount (setQueryData on save, not just invalidate); save() must reject on failure so close paths keep sheet open.
+- [FlowDeck mind map undo/redo](flowdeck-mindmap-undo.md) — history recorder effect deps must EXCLUDE mindmap (two-commit load) or the baseline records blank; drag coalesces via the `if(drag)return` guard.
+- [Cross-dialect claim/CAS updates](db-claim-atomicity.md) — updateReturning is NOT atomic on MySQL (select→update); use updateCount for single-winner claim patterns.
+- [api-zod barrel export](api-zod-barrel.md) — api-zod/src/index.ts must export ONLY ./generated/api; adding ./generated/types dupes zod-schema names and breaks codegen's typecheck:libs with TS2308.
+- [FlowDeck notes & lock crypto](flowdeck-notes.md) — note content is PLAIN TEXT (server derives excerpt/links); locked=flowlock payload as content; web/mobile lock crypto must match byte-for-byte; mobile self-implements base64/utf8/kdf.
+- [RN transformed hit-testing](rn-transformed-hit-testing.md) — a pan/zoom "world" Animated.View holding gesture children must be sized+centered (WORLD_SIZE) or native swallows child touches while visuals look fine.
+- [FlowDeck mobile open task](flowdeck-mobile-open-task.md) — no task route/param; open a task anywhere via shared TaskEditorSheet fed by useGetTask + useListColumns (enabled-gated).
+- [Mind map hierarchy concurrency](mindmap-hierarchy-concurrency.md) — every write to a mindmap's parentId (create/link/reparent/delete) must take pg_advisory_xact_lock(NS, workspaceId) in a txn then re-validate, or concurrency yields cycles/3-level chains/FK-500s.
+- [Per-note E2E password lock](note-lock-e2e.md) — locked notes are browser-encrypted (PBKDF2->AES-GCM); key the editor by note id to remount, or decrypted plaintext/password leaks across notes.
+- [FlowDeck shell nameless-user crash](flowdeck-shell-user-crash.md) — app-root shell reads user.name unguarded; a nameless user (via /me 304 in preview) white-screens the whole app.
+- [Radix ScrollArea clips horizontal children](flowdeck-scrollarea-horizontal.md) — shell's shared ScrollArea Viewport wrapper is display:table (content-width) → horizontal overflow (Kanban) cut off; fix with [&>div]:!block.
+- [api-server dev = one-shot build](api-server-build-workflow.md) — api-server dev does `build && start` with NO watch; restart the workflow after any backend edit or you smoke-test stale code.
+- [FlowDeck recovery security](flowdeck-auth-recovery.md) — public 3-question recovery: normalize answers (keep accents), verify all 3 unconditionally, keep reset rate-limited (email+IP lockout).
+- [Verifying animations via screenshots](screenshot-animation-verification.md) — screenshot service caches by URL (bust with ?v=N); slow keyframes to ~600s in a mockup harness to capture mid-animation states.
+- [Installer update safety](installer-update-safety.md) — post-update "data loss" = env loss OR schema drift (data intact); package auto-upgrades schema at boot, never drops.
+- [FlowDeck hybrid DB + local storage](flowdeck-hybrid-db.md) — schema changes go in BOTH drizzle trees; never use PG-only query features (use lib/db helpers); local upload router mounts before express.json.
+- [FlowDeck shared-hosting installer](flowdeck-installer.md) — allowlist-only admin zip; .env never overrides pre-set env; dual schema export strips drizzle-kit stdout noise; MariaDB e2e via temp workflow.
